@@ -1,0 +1,13 @@
+{
+  "name": "telegram_file_bot_json_persistent",
+  "version": "1.0.0",
+  "description": "Telegram bot with persistent file message storage",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "axios": "^1.6.0",
+    "node-telegram-bot-api": "^0.61.0"
+  }
+}
