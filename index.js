@@ -3,7 +3,7 @@ const axios = require('axios');
 const fs = require('fs');
 
 const BOT_TOKEN = '8172728469:AAHMFtbU1iYpROEWSjXDN-HoRgAW6leABX0';
-const CHANNEL_USERNAME = '@AKOUNT_BOZOR_SHOP_01'; // Kanal username
+const CHANNEL_USERNAME = '@rapqonedu2024'; // Kanal username
 const FILE_GROUP_ID = -1002268361672; // Fayllar turgan guruh ID
 const FILE_STORE = 'fileMessages.json';
 
@@ -56,7 +56,7 @@ bot.on('message', (msg) => {
 // === /start komandasi ===
 bot.onText(/\/start/, (msg) => {
   const chatId = msg.chat.id;
-  bot.sendMessage(chatId, "Assalomu alaykum! Fayllarni olish uchun /fayllar buyrug'ini yozing yoke tugmani bosing", {
+  bot.sendMessage(chatId, "Assalomu alaykum! Fayllarni olish uchun /fayllar buyrug'ini yozing yoke pastdagi tugmani bosing", {
     reply_markup: {
       keyboard: [
         ['YUKLAB OLISH']
@@ -73,7 +73,7 @@ bot.onText(/\/fayllar|YUKLAB OLISH/i, async (msg) => {
   const subscribed = await isUserSubscribed(userId);
 
   if (!subscribed) {
-    return bot.sendMessage(chatId, `Iltimos, ${CHANNEL_USERNAME} kanaliga obuna bo‘ling.`, {
+    return bot.sendMessage(chatId, `Iltimos, ${CHANNEL_USERNAME} kanaliga obuna bo‘ling va yuklab olish tugmasini bosing`, {
       reply_markup: {
         inline_keyboard: [[
           { text: "Kanalga o'tish", url: `https://t.me/${CHANNEL_USERNAME.replace('@', '')}` }
