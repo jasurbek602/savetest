@@ -2,7 +2,7 @@ const TelegramBot = require('node-telegram-bot-api');
 const axios = require('axios');
 const fs = require('fs');
 
-const BOT_TOKEN = '8172728469:AAHMFtbU1iYpROEWSjXDN-HoRgAW6leABX0';
+const BOT_TOKEN = '7558460976:AAHYVzgJjbdex9OLfmbNogIr420mwYNjbEQ';
 const CHANNEL_USERNAME = '@rapqonedu2024'; // Kanal username
 const FILE_GROUP_ID = -1002268361672; // Fayllar turgan guruh ID
 const FILE_STORE = 'fileMessages.json';
