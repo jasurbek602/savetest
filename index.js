@@ -3,7 +3,7 @@ const axios = require('axios');
 const mongoose = require('mongoose');
 
 // === MongoDB ulanish ===
-const mongoose = require('mongoose');
+
 
 mongoose.connect('mongodb+srv://pg99lvl:Jasurbek%232008@cluster0.86xrt46.mongodb.net/?retryWrites=true&w=majority')
   .then(() => console.log("MongoDB ulanish muvaffaqiyatli!"))
