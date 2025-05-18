@@ -9,7 +9,6 @@ const FILE_STORE = 'fileMessages.json';
 
 const bot = new TelegramBot(BOT_TOKEN, { polling: true });
 
-// Fayl saqlash va yuklash
 let fileMessages = [];
 if (fs.existsSync(FILE_STORE)) {
   fileMessages = JSON.parse(fs.readFileSync(FILE_STORE, 'utf8'));
@@ -24,7 +23,6 @@ function addFile(file) {
   saveFileList();
 }
 
-// === Obuna bo'lishni tekshirish ===
 async function isUserSubscribed(userId) {
   try {
     const res = await axios.get(
@@ -37,15 +35,18 @@ async function isUserSubscribed(userId) {
   }
 }
 
-// === Guruhdan fayl kelganda ===
 bot.on('message', (msg) => {
   const chatId = msg.chat.id;
 
   if (chatId === FILE_GROUP_ID) {
-    if (msg.document || msg.audio || msg.video || msg.photo) {
+    const fileType = msg.document ? 'document' : msg.audio ? 'audio' : msg.video ? 'video' : msg.photo ? 'photo' : null;
+
+    if (fileType) {
       const file = {
         message_id: msg.message_id,
-        file_name: msg.document?.file_name || 'Fayl'
+        file_name: msg.document?.file_name || `${fileType} fayl`,
+        type: fileType,
+        date: msg.date
       };
       addFile(file);
       console.log('Yangi fayl qo‘shildi:', file);
@@ -53,7 +54,6 @@ bot.on('message', (msg) => {
   }
 });
 
-// === /start komandasi ===
 bot.onText(/\/start/, (msg) => {
   const chatId = msg.chat.id;
   bot.sendMessage(chatId, "Assalomu alaykum! Fayllarni olish uchun /fayllar buyrug'ini yozing yoke pastdagi tugmani bosing", {
@@ -66,7 +66,6 @@ bot.onText(/\/start/, (msg) => {
   });
 });
 
-// === /fayllar komandasi ===
 bot.onText(/\/fayllar|YUKLAB OLISH/i, async (msg) => {
   const chatId = msg.chat.id;
   const userId = msg.from.id;
@@ -93,10 +92,10 @@ bot.onText(/\/fayllar|YUKLAB OLISH/i, async (msg) => {
         caption: file.file_name
       });
     } catch (error) {
-      // Faylni ro‘yxatdan o‘chiramiz
+      console.error(`Faylni yuborishda xatolik:`, error.message);
       fileMessages.splice(i, 1);
-      i--; // indeksni tuzatamiz
-      saveFileList(); // JSON faylni yangilaymiz
+      i--;
+      saveFileList();
     }
   }
 });
