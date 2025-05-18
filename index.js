@@ -56,6 +56,7 @@ bot.on('message', (msg) => {
 
 bot.onText(/\/start/, (msg) => {
   const chatId = msg.chat.id;
+  
   console.log('Fayl yuborilmoqda:', file.message_id);
 console.log('Guruh ID:', FILE_GROUP_ID);
 console.log('Fayl nomi:', file.file_name);
