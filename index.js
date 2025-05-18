@@ -44,7 +44,9 @@ bot.on('message', (msg) => {
 
   if (chatId === FILE_GROUP_ID) {
     const fileType = msg.document ? 'document' : msg.audio ? 'audio' : msg.video ? 'video' : msg.photo ? 'photo' : null;
-
+    console.log('Fayl yuborilmoqda:', file.message_id);
+console.log('Guruh ID:', FILE_GROUP_ID);
+console.log('Fayl nomi:', file.file_name);
     if (fileType) {
       const file = {
         message_id: msg.message_id,
