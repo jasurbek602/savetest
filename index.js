@@ -3,12 +3,11 @@ const axios = require('axios');
 const mongoose = require('mongoose');
 
 // === MongoDB ulanish ===
-mongoose.connect('mongodb+srv://pg99lvl:Jasurbek#2008@cluster0.86xrt46.mongodb.net/telegrambot?retryWrites=true&w=majority&appName=Cluster0', {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-})
-.then(() => console.log('✅ MongoDB ulandi'))
-.catch(err => console.error('❌ MongoDB ulanish xatosi:', err));
+const mongoose = require('mongoose');
+
+mongoose.connect('mongodb+srv://pg99lvl:Jasurbek%232008@cluster0.86xrt46.mongodb.net/?retryWrites=true&w=majority')
+  .then(() => console.log("MongoDB ulanish muvaffaqiyatli!"))
+  .catch((err) => console.error("MongoDB ulanish xatosi:", err));
 
 // === Fayl modeli ===
 const fileSchema = new mongoose.Schema({
