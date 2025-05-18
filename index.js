@@ -1,28 +1,32 @@
 const TelegramBot = require('node-telegram-bot-api');
 const axios = require('axios');
-const fs = require('fs');
+const mongoose = require('mongoose');
 
+// === MongoDB ulanish ===
+mongoose.connect('mongodb+srv://pg99lvl:Jasurbek#2008@cluster0.86xrt46.mongodb.net/telegrambot?retryWrites=true&w=majority&appName=Cluster0', {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+})
+.then(() => console.log('✅ MongoDB ulandi'))
+.catch(err => console.error('❌ MongoDB ulanish xatosi:', err));
+
+// === Fayl modeli ===
+const fileSchema = new mongoose.Schema({
+  message_id: Number,
+  file_name: String,
+  type: String,
+  date: Number
+});
+const File = mongoose.model('File', fileSchema);
+
+// === Telegram sozlamalari ===
 const BOT_TOKEN = '7558460976:AAHYVzgJjbdex9OLfmbNogIr420mwYNjbEQ';
-const CHANNEL_USERNAME = '@rapqonedu2024'; // Kanal username
-const FILE_GROUP_ID = -1002268361672; // Fayllar turgan guruh ID
-const FILE_STORE = 'fileMessages.json';
+const CHANNEL_USERNAME = '@rapqonedu2024';
+const FILE_GROUP_ID = -1002268361672;
 
 const bot = new TelegramBot(BOT_TOKEN, { polling: true });
 
-let fileMessages = [];
-if (fs.existsSync(FILE_STORE)) {
-  fileMessages = JSON.parse(fs.readFileSync(FILE_STORE, 'utf8'));
-}
-
-function saveFileList() {
-  fs.writeFileSync(FILE_STORE, JSON.stringify(fileMessages, null, 2));
-}
-
-function addFile(file) {
-  fileMessages.push(file);
-  saveFileList();
-}
-
+// === Obuna bo'lishni tekshirish ===
 async function isUserSubscribed(userId) {
   try {
     const res = await axios.get(
@@ -35,35 +39,39 @@ async function isUserSubscribed(userId) {
   }
 }
 
+// === Polling xatolarini tutib olish ===
 bot.on("polling_error", (error) => {
   console.error("Polling xatosi:", error.response?.body || error.message || error);
 });
 
-bot.on('message', (msg) => {
+// === Guruhdan fayl kelganda ===
+bot.on('message', async (msg) => {
   const chatId = msg.chat.id;
 
   if (chatId === FILE_GROUP_ID) {
-    const fileType = msg.document ? 'document' : msg.audio ? 'audio' : msg.video ? 'video' : msg.photo ? 'photo' : null;
-    console.log('Fayl yuborilmoqda:', file.message_id);
-console.log('Guruh ID:', FILE_GROUP_ID);
-console.log('Fayl nomi:', file.file_name);
+    const fileType = msg.document ? 'document' :
+                     msg.audio ? 'audio' :
+                     msg.video ? 'video' :
+                     msg.photo ? 'photo' : null;
+
     if (fileType) {
-      const file = {
+      const file = new File({
         message_id: msg.message_id,
         file_name: msg.document?.file_name || `${fileType} fayl`,
         type: fileType,
         date: msg.date
-      };
-      addFile(file);
-      console.log('Yangi fayl qo‘shildi:', file);
+      });
+
+      await file.save();
+      console.log('✅ Yangi fayl saqlandi:', file);
     }
   }
 });
 
+// === /start komandasi ===
 bot.onText(/\/start/, (msg) => {
   const chatId = msg.chat.id;
-  
-  
+
   bot.sendMessage(chatId, "Assalomu alaykum! Fayllarni olish uchun /fayllar buyrug'ini yozing yoke pastdagi tugmani bosing", {
     reply_markup: {
       keyboard: [
@@ -74,6 +82,7 @@ bot.onText(/\/start/, (msg) => {
   });
 });
 
+// === /fayllar komandasi ===
 bot.onText(/\/fayllar|YUKLAB OLISH/i, async (msg) => {
   const chatId = msg.chat.id;
   const userId = msg.from.id;
@@ -89,21 +98,21 @@ bot.onText(/\/fayllar|YUKLAB OLISH/i, async (msg) => {
     });
   }
 
-  if (fileMessages.length === 0) {
+  const files = await File.find().sort({ date: -1 });
+
+  if (files.length === 0) {
     return bot.sendMessage(chatId, "Hozircha hech qanday fayl mavjud emas.");
   }
 
-  for (let i = 0; i < fileMessages.length; i++) {
-    const file = fileMessages[i];
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i];
     try {
       await bot.copyMessage(chatId, FILE_GROUP_ID, file.message_id, {
         caption: file.file_name
       });
-    }catch (error) {
-  console.error(`Faylni yuborishda xatolik:`, error.message);
-  fileMessages.splice(i, 1);
-  i--;
-  saveFileList();
-}
+    } catch (error) {
+      console.error(`❌ Faylni yuborishda xatolik:`, error.message);
+      await File.deleteOne({ _id: file._id });
+    }
   }
 });
