@@ -91,18 +91,7 @@ bot.on('message', async (msg) => {
 });
 
 // === /start komandasi ===
-bot.onText(/\/start/, (msg) => {
-  const chatId = msg.chat.id;
-  bot.sendMessage(chatId, "Assalomu alaykum! Fayllarni olish uchun bo‘limni tanlang:", {
-    reply_markup: {
-      keyboard: [['📁 Bo‘limlar']],
-      resize_keyboard: true,
-    },
-  });
-});
-
-// === Faylni tanlash menyusi ===
-bot.onText(/\/fayllar|📁 Bo‘limlar/, async (msg) => {
+bot.onText(/\/start/, async (msg) => {
   const chatId = msg.chat.id;
   const userId = msg.from.id;
 
@@ -117,32 +106,55 @@ bot.onText(/\/fayllar|📁 Bo‘limlar/, async (msg) => {
     });
   }
 
+  // Bo‘limlarni inline tugmalar bilan yuborish
   const sections = await Section.find();
   if (sections.length === 0) {
     return bot.sendMessage(chatId, "Hozircha hech qanday bo‘lim mavjud emas.");
   }
 
-  const buttons = sections.map(sec => [{ text: sec.name }]);
+  const inlineKeyboard = sections.map(sec => ([{
+    text: sec.name,
+    callback_data: `section_${sec.name}`
+  }]));
+
   bot.sendMessage(chatId, "Quyidagi bo‘limlardan birini tanlang:", {
     reply_markup: {
-      keyboard: buttons,
-      resize_keyboard: true,
-    },
+      inline_keyboard: inlineKeyboard
+    }
   });
 });
 
-// === Foydalanuvchi bo‘lim nomini yuborganda ===
-bot.on('text', async (msg) => {
+// === Inline tugma bosilganda ===
+bot.on('callback_query', async (callbackQuery) => {
+  const msg = callbackQuery.message;
   const chatId = msg.chat.id;
-  const sectionName = msg.text.trim();
+  const userId = callbackQuery.from.id;
+  const data = callbackQuery.data;
 
-  const section = await Section.findOne({ name: sectionName });
-  if (!section) return;
+  // Bo‘lim nomini olish
+  if (!data.startsWith('section_')) return;
+
+  const sectionName = data.replace('section_', '');
+
+  // Obunani yana tekshirish (ixtiyoriy, agar istasangiz)
+  const subscribed = await isUserSubscribed(userId);
+  if (!subscribed) {
+    return bot.sendMessage(chatId, `Iltimos, ${CHANNEL_USERNAME} kanaliga obuna bo‘ling`, {
+      reply_markup: {
+        inline_keyboard: [[
+          { text: "Kanalga o'tish", url: `https://t.me/${CHANNEL_USERNAME.replace('@', '')}` }
+        ]]
+      }
+    });
+  }
 
   const files = await File.find({ section: sectionName }).sort({ date: -1 });
 
   if (files.length === 0) {
-    await Section.deleteOne({ _id: section._id }); // Bo‘sh bo‘limni o‘chir
+    // Bo‘sh bo‘limni o‘chirish
+    const section = await Section.findOne({ name: sectionName });
+    if (section) await Section.deleteOne({ _id: section._id });
+
     return bot.sendMessage(chatId, "Bu bo‘limda hech qanday fayl yo‘q edi va o‘chirildi.");
   }
 
@@ -155,7 +167,10 @@ bot.on('text', async (msg) => {
     } catch (error) {
       console.error(`❌ Fayl yuborishda xato:`, error.message);
       await File.deleteOne({ _id: file._id });
-      await removeEmptySections(); // Bo‘sh bo‘limni tekshir va tozala
+      await removeEmptySections(); // Bo‘sh bo‘limlarni tekshir va o‘chir
     }
   }
+
+  // Javobni o‘chirish (inline tugma bosilgandan keyin)
+  await bot.answerCallbackQuery(callbackQuery.id);
 });
