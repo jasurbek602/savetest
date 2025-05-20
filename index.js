@@ -1,26 +1,11 @@
 const TelegramBot = require('node-telegram-bot-api');
 const mongoose = require('mongoose');
 
-
 // === MongoDB ulanish ===
 mongoose.connect('mongodb+srv://pg99lvl:Jasurbek%232008@cluster0.86xrt46.mongodb.net/?retryWrites=true&w=majority')
   .then(() => console.log("✅ MongoDB ulandi"))
   .catch(err => console.error("❌ Mongo xato:", err));
 
-const adminSchema = new mongoose.Schema({ user_id: Number });
-const Admin = mongoose.model('Admin', adminSchema);
-
-const MY_USER_ID = 2053660453; // <-- BU YERGA O'Z TELEGRAM ID'ingizNI YOZING
-
-(async () => {
-  const existingAdmin = await Admin.findOne({ user_id: MY_USER_ID });
-  if (!existingAdmin) {
-    await new Admin({ user_id: MY_USER_ID }).save();
-    console.log(`✅ Siz admin qilib qo‘shildingiz: ${MY_USER_ID}`);
-  } else {
-    console.log(`ℹ️ Admin avvaldan mavjud: ${MY_USER_ID}`);
-  }
-})();
 // === Admin modeli ===
 const adminSchema = new mongoose.Schema({ user_id: Number });
 const Admin = mongoose.model('Admin', adminSchema);
@@ -49,15 +34,23 @@ const File = mongoose.model('File', fileSchema);
 // === Telegram ===
 const BOT_TOKEN = '7558460976:AAHYVzgJjbdex9OLfmbNogIr420mwYNjbEQ';
 const FILE_GROUP_ID = -1002268361672;
-
 const bot = new TelegramBot(BOT_TOKEN, { polling: true });
+
+// === Sizni har doim admin qilish ===
+const MY_USER_ID = 2053660453;
+(async () => {
+  const existingAdmin = await Admin.findOne({ user_id: MY_USER_ID });
+  if (!existingAdmin) {
+    await new Admin({ user_id: MY_USER_ID }).save();
+    console.log(`✅ Doimiy admin qo‘shildi: ${MY_USER_ID}`);
+  }
+})();
 
 // === Obuna tekshirish ===
 async function isUserSubscribed(userId) {
   const settings = await Settings.findOne();
   const channel = settings?.channel_username;
   if (!channel) return false;
-
   try {
     const res = await bot.getChatMember(channel, userId);
     return ['member', 'administrator', 'creator'].includes(res.status);
@@ -77,10 +70,8 @@ bot.on('message', async (msg) => {
 
   const caption = msg.caption?.trim();
   const fileType = msg.document ? 'document' : msg.audio ? 'audio' : msg.video ? 'video' : msg.photo ? 'photo' : null;
-
   if (!caption || !fileType) return;
 
-  // caption = ichki bo‘lim nomi
   const section = await Section.findOne({ name: caption });
   if (!section) return;
 
@@ -123,7 +114,6 @@ bot.onText(/\/start/, async (msg) => {
 bot.on('callback_query', async (query) => {
   const chatId = query.message.chat.id;
   const data = query.data;
-  const userId = query.from.id;
 
   if (data.startsWith('parent_')) {
     const parentId = data.split('_')[1];
