@@ -248,10 +248,63 @@ bot.onText(/\/start/, async (msg) => {
     return bot.sendMessage(chatId, "Bo‘limni tanlang:", { reply_markup: { inline_keyboard: keyboard } });
   });
   
-  bot.on('callback_query', async (query) => {
+//   bot.on('callback_query', async (query) => {
+//     const chatId = query.message.chat.id;
+//     const data = query.data;
+  
+//     if (data.startsWith('section_')) {
+//       const sectionName = data.replace('section_', '');
+//       const subs = await SubSection.find({ parentSection: sectionName });
+//       const keyboard = subs.map(s => [{ text: s.name, callback_data: `sub_${sectionName}|${s.name}` }]);
+//       return bot.sendMessage(chatId, "Subbo‘limni tanlang:", { reply_markup: { inline_keyboard: keyboard } });
+//     }
+  
+//     if (data.startsWith('sub_')) {
+//       const [sectionName, subName] = data.replace('sub_', '').split('|');
+//       const files = await File.find({ section: `${sectionName}|${subName}` });
+  
+//       if (!files.length) return bot.sendMessage(chatId, "Bu subbo‘limda hech qanday fayl mavjud emas.");
+  
+//       for (const file of files) {
+//         try {
+//           await bot.copyMessage(chatId, chatId, file.message_id);
+//         } catch (e) {
+//           // Agar fayl topilmasa yoki xatolik bo‘lsa, saqlangan ma'lumotni o‘chirish mumkin
+//           await File.deleteOne({ _id: file._id });
+//         }
+//       }
+//     }
+  
+//     await bot.answerCallbackQuery(query.id);
+//   });
+// === Callback handler ===
+bot.on('callback_query', async (query) => {
     const chatId = query.message.chat.id;
+    const userId = query.from.id;
     const data = query.data;
   
+    // === Fayl qo‘shish bo‘lim/subbo‘lim tanlash ===
+    if (data.startsWith('addfile_section_')) {
+      const sectionName = data.replace('addfile_section_', '');
+      const subSections = await SubSection.find({ parentSection: sectionName });
+  
+      if (!subSections.length) return bot.sendMessage(chatId, "Bu bo‘limda subbo‘lim yo‘q.");
+  
+      const keyboard = subSections.map(s => [{ text: s.name, callback_data: `addfile_sub_${sectionName}|${s.name}` }]);
+      adminSessions[userId] = { step: 'subsection', section: sectionName };
+  
+      return bot.sendMessage(chatId, "Endi subbo‘limni tanlang:", {
+        reply_markup: { inline_keyboard: keyboard }
+      });
+    }
+  
+    if (data.startsWith('addfile_sub_')) {
+      const [sectionName, subName] = data.replace('addfile_sub_', '').split('|');
+      adminSessions[userId] = { step: 'file', section: sectionName, subsection: subName };
+      return bot.sendMessage(chatId, `✅ Endi faylni yuboring: rasm, audio, video, zip yoki hujjat bo‘lishi mumkin`);
+    }
+  
+    // === Foydalanuvchi bo‘lim/subbo‘lim tanlashi va fayl yuborish ===
     if (data.startsWith('section_')) {
       const sectionName = data.replace('section_', '');
       const subs = await SubSection.find({ parentSection: sectionName });
@@ -269,98 +322,62 @@ bot.onText(/\/start/, async (msg) => {
         try {
           await bot.copyMessage(chatId, chatId, file.message_id);
         } catch (e) {
-          // Agar fayl topilmasa yoki xatolik bo‘lsa, saqlangan ma'lumotni o‘chirish mumkin
           await File.deleteOne({ _id: file._id });
         }
       }
     }
   
+    // === Admin panel tugmalari ===
+    if (data === 'admin_panel' && ADMINS.includes(userId)) {
+      return bot.sendMessage(chatId, 'Admin paneli:', {
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: '📂 Bo‘limlarni boshqarish', callback_data: 'admin_manage_sections' }],
+            [{ text: '➕ Bo‘lim qo‘shish', callback_data: 'admin_add_section' }],
+            [{ text: '➕ Subbo‘lim qo‘shish', callback_data: 'admin_add_subsection' }],
+            [{ text: '👤 Admin qo‘shish', callback_data: 'admin_add_admin' }],
+            [{ text: '✏️ Kanalni o‘zgartirish', callback_data: 'admin_change_channel' }],
+          ]
+        }
+      });
+    }
+  
+    if (data === 'admin_manage_sections') {
+      const sections = await Section.find();
+      const keyboard = sections.map(s => [{ text: `🗑 ${s.name}`, callback_data: `del_section_${s.name}` }]);
+      return bot.sendMessage(chatId, 'Bo‘limlardan birini o‘chiring:', { reply_markup: { inline_keyboard: keyboard } });
+    }
+  
+    if (data === 'admin_add_section') {
+      userStates[chatId] = { action: 'add_section' };
+      return bot.sendMessage(chatId, "Yangi bo‘lim nomini kiriting:");
+    }
+  
+    if (data === 'admin_add_subsection') {
+      const sections = await Section.find();
+      const keyboard = sections.map(s => [{ text: s.name, callback_data: `choose_section_for_sub_${s.name}` }]);
+      return bot.sendMessage(chatId, "Subbo‘lim qaysi bo‘limga tegishli?", { reply_markup: { inline_keyboard: keyboard } });
+    }
+  
+    if (data.startsWith('choose_section_for_sub_')) {
+      const section = data.replace('choose_section_for_sub_', '');
+      userStates[chatId] = { action: 'add_subsection', section };
+      return bot.sendMessage(chatId, `Subbo‘lim nomini kiriting (bo‘lim: ${section}):`);
+    }
+  
+    if (data === 'admin_add_admin') {
+      userStates[chatId] = { action: 'add_admin' };
+      return bot.sendMessage(chatId, `Yangi admin ID raqamini kiriting:`);
+    }
+  
+    if (data === 'admin_change_channel') {
+      userStates[chatId] = { action: 'change_channel' };
+      return bot.sendMessage(chatId, `Yangi kanal usernamesini kiriting (@ bilan):`);
+    }
+  
     await bot.answerCallbackQuery(query.id);
   });
-// === Callback handler ===
-bot.on('callback_query', async (query) => {
-  const chatId = query.message.chat.id;
-  const userId = query.from.id;
-  const data = query.data;
-
-  // Admin panel
-  if (data === 'admin_panel' && ADMINS.includes(userId)) {
-    return bot.sendMessage(chatId, 'Admin paneli:', {
-      reply_markup: {
-        inline_keyboard: [
-          [{ text: '📂 Bo‘limlarni boshqarish', callback_data: 'admin_manage_sections' }],
-          [{ text: '➕ Bo‘lim qo‘shish', callback_data: 'admin_add_section' }],
-          [{ text: '➕ Subbo‘lim qo‘shish', callback_data: 'admin_add_subsection' }],
-          [{ text: '👤 Admin qo‘shish', callback_data: 'admin_add_admin' }],
-          [{ text: '✏️ Kanalni o‘zgartirish', callback_data: 'admin_change_channel' }],
-        ]
-      }
-    });
-  }
-
-  if (data === 'admin_manage_sections') {
-    const sections = await Section.find();
-    const keyboard = sections.map(s => [{ text: `🗑 ${s.name}`, callback_data: `del_section_${s.name}` }]);
-    return bot.sendMessage(chatId, 'Bo‘limlardan birini o‘chiring:', { reply_markup: { inline_keyboard: keyboard } });
-  }
-
-  if (data === 'admin_add_section') {
-    userStates[chatId] = { action: 'add_section' };
-    return bot.sendMessage(chatId, "Yangi bo‘lim nomini kiriting:");
-  }
-
-  if (data === 'admin_add_subsection') {
-    const sections = await Section.find();
-    const keyboard = sections.map(s => [{ text: s.name, callback_data: `choose_subsection_parent_${s.name}` }]);
-    return bot.sendMessage(chatId, "Subbo‘lim qaysi bo‘limga tegishli?", { reply_markup: { inline_keyboard: keyboard } });
-  }
-
-  if (data.startsWith('choose_subsection_parent_')) {
-    const sectionName = data.replace('choose_subsection_parent_', '');
-    userStates[chatId] = { action: 'add_subsection', section: sectionName };
-    return bot.sendMessage(chatId, `Subbo‘lim nomini kiriting (bo‘lim: ${sectionName}):`);
-  }
-
-  if (data === 'admin_add_admin') {
-    userStates[chatId] = { action: 'add_admin' };
-    return bot.sendMessage(chatId, "Yangi adminning Telegram ID sini kiriting:");
-  }
-
-  if (data === 'admin_change_channel') {
-    userStates[chatId] = { action: 'change_channel' };
-    return bot.sendMessage(chatId, "Yangi kanal username kiriting (masalan: @mychannel):");
-  }
-
-  if (data.startsWith('del_section_')) {
-    const name = data.replace('del_section_', '');
-    await Section.deleteOne({ name });
-    await SubSection.deleteMany({ parentSection: name });
-    await File.deleteMany({ section: new RegExp(`^${name}\\|`) });
-    return bot.sendMessage(chatId, `❌ ${name} bo‘limi o‘chirildi`);
-  }
-
-  if (data.startsWith('section_')) {
-    const sectionName = data.replace('section_', '');
-    const subs = await SubSection.find({ parentSection: sectionName });
-    const keyboard = subs.map(s => [{ text: s.name, callback_data: `sub_${sectionName}|${s.name}` }]);
-    return bot.sendMessage(chatId, "Subbo‘limni tanlang:", { reply_markup: { inline_keyboard: keyboard } });
-  }
-
-  if (data.startsWith('sub_')) {
-    const [sectionName, subSectionName] = data.replace('sub_', '').split('|');
-    const files = await File.find({ section: `${sectionName}|${subSectionName}` });
-    for (const file of files) {
-      try {
-        await bot.copyMessage(chatId, FILE_GROUP_ID, file.message_id, { caption: file.file_name });
-      } catch {
-        await File.deleteOne({ _id: file._id });
-        await removeEmptySections();
-      }
-    }
-  }
-
-  await bot.answerCallbackQuery(query.id);
-});
+  
 
 // === /admin komandasi ===
 bot.onText(/\/admin/, (msg) => {
