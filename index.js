@@ -1,8 +1,9 @@
 const TelegramBot = require('node-telegram-bot-api');
 const mongoose = require('mongoose');
 
+
 // === MongoDB ulanish ===
-mongoose.connect('YOUR_MONGO_URI')
+mongoose.connect('mongodb+srv://pg99lvl:Jasurbek%232008@cluster0.86xrt46.mongodb.net/?retryWrites=true&w=majority')
   .then(() => console.log("✅ MongoDB ulandi"))
   .catch(err => console.error("❌ Mongo xato:", err));
 
@@ -32,8 +33,8 @@ const fileSchema = new mongoose.Schema({
 const File = mongoose.model('File', fileSchema);
 
 // === Telegram ===
-const BOT_TOKEN = 'YOUR_BOT_TOKEN';
-const FILE_GROUP_ID = -1001234567890;
+const BOT_TOKEN = '7558460976:AAHYVzgJjbdex9OLfmbNogIr420mwYNjbEQ';
+const FILE_GROUP_ID = -1002268361672;
 
 const bot = new TelegramBot(BOT_TOKEN, { polling: true });
 
