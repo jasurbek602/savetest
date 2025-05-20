@@ -299,11 +299,11 @@ bot.on('callback_query', async (query) => {
       });
     }
   
-    if (data.startsWith('addfile_sub_')) {
-      const [sectionName, subName] = data.replace('addfile_sub_', '').split('|');
-      adminSessions[userId] = { step: 'file', section: sectionName, subsection: subName };
-      return bot.sendMessage(chatId, `✅ Endi faylni yuboring: rasm, audio, video, zip yoki hujjat bo‘lishi mumkin`);
-    }
+    // if (data.startsWith('addfile_sub_')) {
+    //   const [sectionName, subName] = data.replace('addfile_sub_', '').split('|');
+    //   adminSessions[userId] = { step: 'file', section: sectionName, subsection: subName };
+    //   return bot.sendMessage(chatId, `✅ Endi faylni yuboring: rasm, audio, video, zip yoki hujjat bo‘lishi mumkin`);
+    // }
   
     // === Foydalanuvchi bo‘lim/subbo‘lim tanlashi va fayl yuborish ===
     if (data.startsWith('section_')) {
