@@ -231,6 +231,7 @@ bot.on('message', async (msg) => {
 // Bo‘limlar va subbo‘limlar ko‘rsatish va fayllarni yuborish (foydalanuvchi uchun)
 bot.onText(/\/start/, async (msg) => {
     const chatId = msg.chat.id;
+    const userId = msg.from.id;
     
     const subscribed = await isUserSubscribed(userId);
     if (!subscribed) {
