@@ -1,6 +1,3 @@
-js
-Копировать
-Редактировать
 const TelegramBot = require('node-telegram-bot-api');
 const mongoose = require('mongoose');
 
@@ -158,3 +155,4 @@ bot.on('callback_query', async (query) => {
   }
 
   await bot.answerCallbackQuery(query.id);
+});
