@@ -23,6 +23,7 @@ const fileSchema = new mongoose.Schema({
   section: String, // section|subSection
 });
 const File = mongoose.model('File', fileSchema);
+const adminSessions = {}; // { userId: { step: 'section' | 'subsection' | 'file', section: '', subsection: '' } }
 
 const sectionSchema = new mongoose.Schema({ name: String });
 const Section = mongoose.model('Section', sectionSchema);
@@ -35,6 +36,88 @@ const SubSection = mongoose.model('SubSection', subSectionSchema);
 
 const bot = new TelegramBot(BOT_TOKEN, { polling: true });
 const userStates = {};
+
+bot.onText(/\/addfile/, async (msg) => {
+  const chatId = msg.chat.id;
+  const userId = msg.from.id;
+
+  if (!ADMINS.includes(userId)) return;
+
+  const sections = await Section.find();
+  if (!sections.length) return bot.sendMessage(chatId, "Hech qanday bo‘lim yo‘q. Avval bo‘lim qo‘shing.");
+
+  const keyboard = sections.map(s => [{ text: s.name, callback_data: `addfile_section_${s.name}` }]);
+  adminSessions[userId] = { step: 'section' };
+
+  bot.sendMessage(chatId, "Fayl qaysi bo‘limga qo‘shilsin?", {
+    reply_markup: { inline_keyboard: keyboard }
+  });
+});
+
+bot.on('callback_query', async (query) => {
+  const data = query.data;
+  const userId = query.from.id;
+  const chatId = query.message.chat.id;
+
+  // Bo‘lim tanlandi
+  if (data.startsWith('addfile_section_')) {
+    const sectionName = data.replace('addfile_section_', '');
+    const subSections = await SubSection.find({ parentSection: sectionName });
+
+    if (!subSections.length) return bot.sendMessage(chatId, "Bu bo‘limda subbo‘lim yo‘q.");
+
+    const keyboard = subSections.map(s => [{ text: s.name, callback_data: `addfile_sub_${sectionName}|${s.name}` }]);
+    adminSessions[userId] = { step: 'subsection', section: sectionName };
+
+    return bot.sendMessage(chatId, "Endi subbo‘limni tanlang:", {
+      reply_markup: { inline_keyboard: keyboard }
+    });
+  }
+
+  // Subbo‘lim tanlandi
+  if (data.startsWith('addfile_sub_')) {
+    const [sectionName, subName] = data.replace('addfile_sub_', '').split('|');
+    adminSessions[userId] = { step: 'file', section: sectionName, subsection: subName };
+
+    return bot.sendMessage(chatId, `✅ Endi faylni yuboring: rasm, audio, video, zip yoki hujjat bo‘lishi mumkin`);
+  }
+
+  await bot.answerCallbackQuery(query.id);
+});
+
+bot.on('message', async (msg) => {
+  const userId = msg.from.id;
+  const chatId = msg.chat.id;
+  const session = adminSessions[userId];
+
+  // Guruhdan kelgan fayl emas, faqat admin session uchun
+  if (!session || session.step !== 'file' || msg.chat.id === FILE_GROUP_ID) return;
+
+  const fileType = msg.document ? 'document'
+    : msg.photo ? 'photo'
+    : msg.audio ? 'audio'
+    : msg.video ? 'video'
+    : null;
+
+  if (!fileType) return bot.sendMessage(chatId, "❗ Yuborilgan fayl formati noto‘g‘ri. Faqat rasm, audio, video yoki hujjat bo‘lishi mumkin.");
+
+  const fileName = msg.document?.file_name || `${fileType} fayl`;
+
+  const fullSection = `${session.section}|${session.subsection}`;
+
+  const file = new File({
+    message_id: msg.message_id,
+    file_name: fileName,
+    type: fileType,
+    date: msg.date,
+    section: fullSection,
+  });
+
+  await file.save();
+  delete adminSessions[userId];
+
+  return bot.sendMessage(chatId, `✅ Fayl saqlandi! Bo‘lim: ${session.section} > ${session.subsection}`);
+});
 
 // === Obuna tekshirish ===
 async function isUserSubscribed(userId) {
