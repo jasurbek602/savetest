@@ -9,6 +9,7 @@ const BOT_TOKEN = '7558460976:AAHYVzgJjbdex9OLfmbNogIr420mwYNjbEQ';
 let CHANNEL_USERNAME = '@rapqonedu2024';
 const ADMINS = [2053660453]; // Admin user ID sini shu yerga yozing
 
+
 // === MongoDB ulanish ===
 mongoose.connect('mongodb+srv://pg99lvl:Jasurbek%232008@cluster0.86xrt46.mongodb.net/?retryWrites=true&w=majority')
   .then(() => console.log("✅ MongoDB ulanish muvaffaqiyatli"))
