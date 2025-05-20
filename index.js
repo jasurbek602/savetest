@@ -192,10 +192,7 @@ bot.on('message', async (msg) => {
 });
 
 // === MONGOOSE CONNECTION ===
-mongoose.connect(mongoUri)
-  .then(async () => {
-    console.log("✅ MongoDB ulandi.");
-    const existingChannel = await Channel.findOne();
-    if (existingChannel) channelUsername = existingChannel.username;
-  })
-  .catch((err) => console.error("Mongo xato:", err));
+
+mongoose.connect('mongodb+srv://pg99lvl:Jasurbek%232008@cluster0.86xrt46.mongodb.net/?retryWrites=true&w=majority')
+  .then(() => console.log("✅ MongoDB ulanish muvaffaqiyatli!"))
+  .catch((err) => console.error("❌ MongoDB ulanish xatosi:", err));
