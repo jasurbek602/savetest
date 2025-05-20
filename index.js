@@ -16,12 +16,13 @@ mongoose.connect('mongodb+srv://pg99lvl:Jasurbek%232008@cluster0.86xrt46.mongodb
 
 // === Modellar ===
 const fileSchema = new mongoose.Schema({
-  message_id: Number,
-  file_name: String,
-  type: String,
-  date: Number,
-  section: String, // section|subSection
-});
+    message_id: Number,
+    file_name: String,
+    type: String,
+    date: Number,
+    section: String,
+    from_chat_id: Number, // <<< BU YANGI MAYDON
+  });
 const File = mongoose.model('File', fileSchema);
 const adminSessions = {}; // { userId: { step: 'section' | 'subsection' | 'file', section: '', subsection: '' } }
 
@@ -106,12 +107,13 @@ bot.on('message', async (msg) => {
   const fullSection = `${session.section}|${session.subsection}`;
 
   const file = new File({
-    message_id: msg.message_id,
-    file_name: fileName,
-    type: fileType,
-    date: msg.date,
-    section: fullSection,
-  });
+  message_id: msg.message_id,
+  file_name: fileName,
+  type: fileType,
+  date: msg.date,
+  section: fullSection,
+  from_chat_id: msg.chat.id, // <<< BU QATORNI QO‘SHING
+});
 
   await file.save();
   delete adminSessions[userId];
@@ -318,7 +320,7 @@ bot.on('callback_query', async (query) => {
   
         for (const file of files) {
           try {
-            await bot.copyMessage(chatId, chatId, file.message_id);
+            await bot.copyMessage(chatId, file.from_chat_id, file.message_id);
           } catch (e) {
             await File.deleteOne({ _id: file._id });
             await bot.sendMessage(chatId, `⚠️ Faylni yuborib bo‘lmadi va bazadan o‘chirildi: ${file.file_name}`);
