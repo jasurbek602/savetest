@@ -92,7 +92,9 @@ bot.onText(/\/start/, async (msg) => {
   const chatId = msg.chat.id;
   const userId = msg.from.id;
 
-  if (!await isUserSubscribed(userId)) {
+  // 👇 Bu yerga admin bo‘lsa, obuna talab qilinmasin
+  const admin = await isAdmin(userId);
+  if (!admin && !await isUserSubscribed(userId)) {
     const settings = await Settings.findOne();
     return bot.sendMessage(chatId, `Iltimos, ${settings?.channel_username} kanaliga obuna bo‘ling:`, {
       reply_markup: {
