@@ -91,7 +91,7 @@ bot.on('message', async (msg) => {
   const session = adminSessions[userId];
 
   // Guruhdan kelgan fayl emas, faqat admin session uchun
-  if (!session || session.step !== 'file' || msg.chat.id === FILE_GROUP_ID) return;
+  if (!session || session.step !== 'file') return;
 
   const fileType = msg.document ? 'document'
     : msg.photo ? 'photo'
