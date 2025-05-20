@@ -1,198 +1,180 @@
+// === Kerakli modullar ===
 const TelegramBot = require('node-telegram-bot-api');
+const axios = require('axios');
 const mongoose = require('mongoose');
 
-// === SETTINGS ===
-const bot = new TelegramBot('7558460976:AAHYVzgJjbdex9OLfmbNogIr420mwYNjbEQ', { polling: true });
-const mongoUri = 'mongodb+srv://uzbekgeber:Geber2024@cluster0.6xnrxs1.mongodb.net/mybot?retryWrites=true&w=majority&appName=Cluster0';
-const groupId = -1002268361672;
-let channelUsername = '@rapqonedu2024';
+// === MongoDB ulanish ===
+mongoose.connect('mongodb+srv://pg99lvl:Jasurbek%232008@cluster0.86xrt46.mongodb.net/?retryWrites=true&w=majority')
+  .then(() => console.log("✅ MongoDB ulanish muvaffaqiyatli!"))
+  .catch((err) => console.error("❌ MongoDB ulanish xatosi:", err));
 
-// === SCHEMAS ===
-const adminSchema = new mongoose.Schema({ user_id: Number });
-const channelSchema = new mongoose.Schema({ username: String });
-const sectionSchema = new mongoose.Schema({ name: String, parent: { type: mongoose.Schema.Types.ObjectId, default: null } });
-const fileSchema = new mongoose.Schema({ file_id: String, file_name: String, section_id: mongoose.Schema.Types.ObjectId });
+// === Adminlar ro'yxati ===
+const ADMINS = [6147995256];
 
-const Admin = mongoose.model('Admin', adminSchema);
-const Channel = mongoose.model('Channel', channelSchema);
-const Section = mongoose.model('Section', sectionSchema);
+// === Modelar ===
+const fileSchema = new mongoose.Schema({
+  message_id: Number,
+  file_name: String,
+  type: String,
+  date: Number,
+  section: String, // section|subSection
+});
 const File = mongoose.model('File', fileSchema);
 
-// === STATES ===
-const userStates = new Map();
+const sectionSchema = new mongoose.Schema({ name: String });
+const Section = mongoose.model('Section', sectionSchema);
 
-function setUserState(userId, state, data = {}) {
-  userStates.set(userId, { state, ...data });
-}
+const subSectionSchema = new mongoose.Schema({
+  name: String,
+  parentSection: String,
+});
+const SubSection = mongoose.model('SubSection', subSectionSchema);
 
-function getUserState(userId) {
-  return userStates.get(userId);
-}
+// === Telegram sozlamalari ===
+let CHANNEL_USERNAME = '@rapqonedu2024';
+const FILE_GROUP_ID = -1002268361672;
+const BOT_TOKEN = '7558460976:AAHYVzgJjbdex9OLfmbNogIr420mwYNjbEQ';
+const bot = new TelegramBot(BOT_TOKEN, { polling: true });
 
-function clearUserState(userId) {
-  userStates.delete(userId);
-}
-
-// === FUNCTIONS ===
-async function isAdmin(userId) {
-  const admin = await Admin.findOne({ user_id: userId });
-  return !!admin;
-}
-
-function showAdminMenu(chatId) {
-  const keyboard = [
-    [{ text: "📁 Bo‘lim qo‘shish", callback_data: 'add_section' }],
-    [{ text: "📂 Subbo‘lim qo‘shish", callback_data: 'add_subsection' }],
-    [{ text: "📄 Fayl qo‘shish", callback_data: 'add_file' }],
-    [{ text: "➕ Admin qo‘shish", callback_data: 'add_admin' }],
-    [{ text: "⚙️ Kanalni o‘zgartirish", callback_data: 'set_channel' }],
-  ];
-  bot.sendMessage(chatId, "Admin menyusi:", { reply_markup: { inline_keyboard: keyboard } });
-}
-
-// === START ===
-bot.onText(/\/start/, async (msg) => {
-  const userId = msg.from.id;
-  const chatId = msg.chat.id;
-
+// === Obuna tekshirish ===
+async function isUserSubscribed(userId) {
+  if (ADMINS.includes(userId)) return true;
   try {
-    const res = await bot.getChatMember(channelUsername, userId);
-    if (['member', 'administrator', 'creator'].includes(res.status)) {
-      const isAdminUser = await isAdmin(userId);
-      if (isAdminUser) return showAdminMenu(chatId);
+    const res = await axios.get(`https://api.telegram.org/bot${BOT_TOKEN}/getChatMember?chat_id=${CHANNEL_USERNAME}&user_id=${userId}`);
+    const status = res.data.result.status;
+    return ['member', 'administrator', 'creator'].includes(status);
+  } catch {
+    return false;
+  }
+}
 
-      const sections = await Section.find({ parent: null });
-      const keyboard = sections.map(sec => ([{ text: sec.name, callback_data: `parent_${sec._id}` }]));
-      bot.sendMessage(chatId, "📁 Bo‘limlardan birini tanlang:", {
-        reply_markup: { inline_keyboard: keyboard }
-      });
-    } else {
-      bot.sendMessage(chatId, `❌ Avval ${channelUsername} kanaliga obuna bo‘ling!`);
+async function removeEmptySections() {
+  const sections = await Section.find();
+  for (const section of sections) {
+    const count = await File.countDocuments({ section: new RegExp(`^${section.name}\|`) });
+    if (count === 0) {
+      await Section.deleteOne({ _id: section._id });
+      await SubSection.deleteMany({ parentSection: section.name });
     }
-  } catch (err) {
-    bot.sendMessage(chatId, `⚠️ Obuna tekshiruvida xatolik. Kanal: ${channelUsername}`);
+  }
+}
+
+// === Guruhdan fayl kelganda ===
+bot.on('message', async (msg) => {
+  if (msg.chat.id !== FILE_GROUP_ID) return;
+
+  const fileType = msg.document ? 'document' : msg.audio ? 'audio' : msg.video ? 'video' : msg.photo ? 'photo' : null;
+  const caption = msg.caption?.trim();
+
+  if (fileType && caption && caption.includes('|')) {
+    const [sectionName, subSectionName] = caption.split('|').map(s => s.trim());
+
+    let section = await Section.findOne({ name: sectionName });
+    if (!section) {
+      section = new Section({ name: sectionName });
+      await section.save();
+    }
+
+    let subSection = await SubSection.findOne({ name: subSectionName, parentSection: sectionName });
+    if (!subSection) {
+      subSection = new SubSection({ name: subSectionName, parentSection: sectionName });
+      await subSection.save();
+    }
+
+    const file = new File({
+      message_id: msg.message_id,
+      file_name: msg.document?.file_name || `${fileType} fayl`,
+      type: fileType,
+      date: msg.date,
+      section: `${sectionName}|${subSectionName}`,
+    });
+
+    await file.save();
   }
 });
 
-// === CALLBACKS ===
+// === /start ===
+bot.onText(/\/start/, async (msg) => {
+  const chatId = msg.chat.id;
+  const userId = msg.from.id;
+
+  const subscribed = await isUserSubscribed(userId);
+  if (!subscribed) {
+    return bot.sendMessage(chatId, `Iltimos, ${CHANNEL_USERNAME} kanaliga obuna bo‘ling`, {
+      reply_markup: {
+        inline_keyboard: [[{ text: "Kanalga o'tish", url: `https://t.me/${CHANNEL_USERNAME.replace('@', '')}` }]]
+      }
+    });
+  }
+
+  const sections = await Section.find();
+  if (sections.length === 0) return bot.sendMessage(chatId, "Bo‘limlar mavjud emas.");
+
+  const keyboard = sections.map(sec => [{ text: sec.name, callback_data: `section_${sec.name}` }]);
+  bot.sendMessage(chatId, "Bo‘limni tanlang:", { reply_markup: { inline_keyboard: keyboard } });
+});
+
+// === Callback handler ===
 bot.on('callback_query', async (query) => {
-  const userId = query.from.id;
   const chatId = query.message.chat.id;
+  const userId = query.from.id;
   const data = query.data;
 
-  if (!(await isAdmin(userId)) && !data.startsWith("parent_")) {
-    return bot.answerCallbackQuery(query.id, { text: "Faqat adminlar uchun!" });
+  if (data === 'admin_manage_sections' && ADMINS.includes(userId)) {
+    const sections = await Section.find();
+    const keyboard = sections.map(s => [{ text: `🗑 ${s.name}`, callback_data: `del_section_${s.name}` }]);
+    return bot.sendMessage(chatId, 'Bo‘limlardan birini o‘chiring:', { reply_markup: { inline_keyboard: keyboard } });
   }
 
-  if (data === 'add_section') {
-    setUserState(userId, 'awaiting_section_name');
-    return bot.sendMessage(chatId, "Bo‘lim nomini kiriting:");
+  if (data === 'admin_add_section' && ADMINS.includes(userId)) {
+    return bot.sendMessage(chatId, 'Yangi bo‘lim nomini yuboring:');
   }
 
-  if (data === 'add_subsection') {
-    const sections = await Section.find({ parent: null });
-    const keyboard = sections.map(sec => ([{ text: sec.name, callback_data: `choose_parent_${sec._id}` }]));
-    return bot.sendMessage(chatId, "Qaysi bo‘limga subbo‘lim qo‘shamiz?", { reply_markup: { inline_keyboard: keyboard } });
+  if (data.startsWith('del_section_') && ADMINS.includes(userId)) {
+    const sectionName = data.replace('del_section_', '');
+    await Section.deleteOne({ name: sectionName });
+    await SubSection.deleteMany({ parentSection: sectionName });
+    await File.deleteMany({ section: new RegExp(`^${sectionName}\|`) });
+    return bot.sendMessage(chatId, `❌ ${sectionName} bo‘limi o‘chirildi.`);
   }
 
-  if (data.startsWith('choose_parent_')) {
-    const parentId = data.split('_')[2];
-    setUserState(userId, 'awaiting_subsection_name', { parentId });
-    return bot.sendMessage(chatId, "Subbo‘lim nomini kiriting:");
-  }
+  if (data.startsWith('section_')) {
+    const sectionName = data.replace('section_', '');
+    const subs = await SubSection.find({ parentSection: sectionName });
+    if (subs.length === 0) return bot.sendMessage(chatId, "Bu bo‘limda subbo‘limlar yo‘q.");
 
-  if (data === 'add_file') {
-    const parents = await Section.find({ parent: { $ne: null } });
-    const keyboard = parents.map(sec => ([{ text: sec.name, callback_data: `uploadfile_${sec._id}` }]));
-    return bot.sendMessage(chatId, "Faylni qaysi subbo‘limga joylaymiz?", { reply_markup: { inline_keyboard: keyboard } });
-  }
-
-  if (data.startsWith('uploadfile_')) {
-    const sectionId = data.split('_')[1];
-    setUserState(userId, 'awaiting_file', { sectionId });
-    return bot.sendMessage(chatId, "Iltimos faylni yuboring:");
-  }
-
-  if (data === 'add_admin') {
-    setUserState(userId, 'awaiting_admin_id');
-    return bot.sendMessage(chatId, "Yangi adminning Telegram ID raqamini yuboring:");
-  }
-
-  if (data === 'set_channel') {
-    setUserState(userId, 'awaiting_channel_username');
-    return bot.sendMessage(chatId, "Yangi kanal username (masalan: @mychannel):");
-  }
-
-  if (data.startsWith('parent_')) {
-    const parentId = data.split('_')[1];
-    const subSections = await Section.find({ parent: parentId });
-    if (subSections.length === 0) return bot.sendMessage(chatId, "Subbo‘limlar mavjud emas.");
-    const keyboard = subSections.map(sec => ([{ text: sec.name, callback_data: `sub_${sec._id}` }]));
+    const keyboard = subs.map(s => [{ text: s.name, callback_data: `sub_${sectionName}|${s.name}` }]);
     return bot.sendMessage(chatId, "Subbo‘limni tanlang:", { reply_markup: { inline_keyboard: keyboard } });
   }
 
   if (data.startsWith('sub_')) {
-    const sectionId = data.split('_')[1];
-    const files = await File.find({ section_id: sectionId });
-    if (files.length === 0) return bot.sendMessage(chatId, "Fayllar topilmadi.");
+    const [sectionName, subSectionName] = data.replace('sub_', '').split('|');
+    const files = await File.find({ section: `${sectionName}|${subSectionName}` });
     for (const file of files) {
-      await bot.sendDocument(chatId, file.file_id, { caption: file.file_name });
+      try {
+        await bot.copyMessage(chatId, FILE_GROUP_ID, file.message_id, { caption: file.file_name });
+      } catch {
+        await File.deleteOne({ _id: file._id });
+        await removeEmptySections();
+      }
     }
+    return bot.answerCallbackQuery(query.id);
   }
 });
 
-// === MESSAGE HANDLER ===
-bot.on('message', async (msg) => {
-  const userId = msg.from.id;
-  const chatId = msg.chat.id;
-  const state = getUserState(userId);
-  if (!state) return;
+// === Admin buyruqlari ===
+bot.onText(/\/admin/, (msg) => {
+  if (!ADMINS.includes(msg.from.id)) return;
 
-  if (state.state === 'awaiting_section_name') {
-    await Section.create({ name: msg.text });
-    bot.sendMessage(chatId, "✅ Bo‘lim qo‘shildi.");
-    clearUserState(userId);
-  }
-
-  if (state.state === 'awaiting_subsection_name') {
-    await Section.create({ name: msg.text, parent: state.parentId });
-    bot.sendMessage(chatId, "✅ Subbo‘lim qo‘shildi.");
-    clearUserState(userId);
-  }
-
-  if (state.state === 'awaiting_file' && msg.document) {
-    await File.create({
-      file_id: msg.document.file_id,
-      file_name: msg.document.file_name,
-      section_id: state.sectionId
-    });
-    bot.sendMessage(chatId, "✅ Fayl saqlandi.");
-    clearUserState(userId);
-  }
-
-  if (state.state === 'awaiting_admin_id') {
-    const newId = parseInt(msg.text);
-    if (!isNaN(newId)) {
-      await Admin.create({ user_id: newId });
-      bot.sendMessage(chatId, `✅ Admin qo‘shildi: ${newId}`);
-    } else {
-      bot.sendMessage(chatId, "❌ Noto‘g‘ri ID.");
+  bot.sendMessage(msg.chat.id, 'Admin paneli:', {
+    reply_markup: {
+      inline_keyboard: [
+        [{ text: '📂 Bo‘limlarni boshqarish', callback_data: 'admin_manage_sections' }],
+        [{ text: '➕ Bo‘lim qo‘shish', callback_data: 'admin_add_section' }],
+        [{ text: '➕ Subbo‘lim qo‘shish', callback_data: 'admin_add_subsection' }],
+        [{ text: '👤 Admin qo‘shish', callback_data: 'admin_add_admin' }],
+        [{ text: '✏️ Kanalni o‘zgartirish', callback_data: 'admin_change_channel' }],
+      ]
     }
-    clearUserState(userId);
-  }
-
-  if (state.state === 'awaiting_channel_username') {
-    const username = msg.text.startsWith('@') ? msg.text : `@${msg.text}`;
-    await Channel.deleteMany({});
-    await Channel.create({ username });
-    channelUsername = username;
-    bot.sendMessage(chatId, `✅ Kanal yangilandi: ${username}`);
-    clearUserState(userId);
-  }
+  });
 });
-
-// === MONGOOSE CONNECTION ===
-
-mongoose.connect('mongodb+srv://pg99lvl:Jasurbek%232008@cluster0.86xrt46.mongodb.net/?retryWrites=true&w=majority')
-  .then(() => console.log("✅ MongoDB ulanish muvaffaqiyatli!"))
-  .catch((err) => console.error("❌ MongoDB ulanish xatosi:", err));
