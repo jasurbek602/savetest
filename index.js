@@ -2,14 +2,14 @@
 const TelegramBot = require('node-telegram-bot-api');
 const axios = require('axios');
 const mongoose = require('mongoose');
-
+const Admin = mongoose.model('Admin', adminSchema);
 // === MongoDB ulanish ===
 mongoose.connect('mongodb+srv://pg99lvl:Jasurbek%232008@cluster0.86xrt46.mongodb.net/?retryWrites=true&w=majority')
   .then(() => console.log("✅ MongoDB ulanish muvaffaqiyatli!"))
   .catch((err) => console.error("❌ MongoDB ulanish xatosi:", err));
 
 // === Adminlar ro'yxati ===
-const ADMINS = [6147995256];
+const ADMINS = [2053660453];
 
 // === Modelar ===
 const fileSchema = new mongoose.Schema({
