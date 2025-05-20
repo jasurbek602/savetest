@@ -7,6 +7,20 @@ mongoose.connect('mongodb+srv://pg99lvl:Jasurbek%232008@cluster0.86xrt46.mongodb
   .then(() => console.log("✅ MongoDB ulandi"))
   .catch(err => console.error("❌ Mongo xato:", err));
 
+const adminSchema = new mongoose.Schema({ user_id: Number });
+const Admin = mongoose.model('Admin', adminSchema);
+
+const MY_USER_ID = 2053660453; // <-- BU YERGA O'Z TELEGRAM ID'ingizNI YOZING
+
+(async () => {
+  const existingAdmin = await Admin.findOne({ user_id: MY_USER_ID });
+  if (!existingAdmin) {
+    await new Admin({ user_id: MY_USER_ID }).save();
+    console.log(`✅ Siz admin qilib qo‘shildingiz: ${MY_USER_ID}`);
+  } else {
+    console.log(`ℹ️ Admin avvaldan mavjud: ${MY_USER_ID}`);
+  }
+})();
 // === Admin modeli ===
 const adminSchema = new mongoose.Schema({ user_id: Number });
 const Admin = mongoose.model('Admin', adminSchema);
