@@ -11,6 +11,7 @@ const adminSchema = new mongoose.Schema({ user_id: Number });
 const Admin = mongoose.model('Admin', adminSchema);
 
 const settingsSchema = new mongoose.Schema({ channel_username: String });
+
 const Settings = mongoose.model('Settings', settingsSchema);
 
 const sectionSchema = new mongoose.Schema({
