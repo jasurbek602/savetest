@@ -309,19 +309,22 @@ bot.on('callback_query', async (query) => {
     }
   
     if (data.startsWith('sub_')) {
-      const [sectionName, subName] = data.replace('sub_', '').split('|');
-      const files = await File.find({ section: `${sectionName}|${subName}` });
+        const [sectionName, subName] = data.replace('sub_', '').split('|');
+        const files = await File.find({ section: `${sectionName}|${subName}` });
   
-      if (!files.length) return bot.sendMessage(chatId, "Bu subbo‘limda hech qanday fayl mavjud emas.");
+        if (!files.length) {
+          return bot.sendMessage(chatId, "❌ Bu subbo‘limda hech qanday fayl mavjud emas.");
+        }
   
-      for (const file of files) {
-        try {
-          await bot.copyMessage(chatId, chatId, file.message_id);
-        } catch (e) {
-          
+        for (const file of files) {
+          try {
+            await bot.copyMessage(chatId, chatId, file.message_id);
+          } catch (e) {
+            await File.deleteOne({ _id: file._id });
+            await bot.sendMessage(chatId, `⚠️ Faylni yuborib bo‘lmadi va bazadan o‘chirildi: ${file.file_name}`);
+          }
         }
       }
-    }
   
     // === Admin panel tugmalari ===
     if (data === 'admin_panel' && ADMINS.includes(userId)) {
