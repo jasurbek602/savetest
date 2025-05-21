@@ -386,19 +386,27 @@ bot.sendMessage(chatId, "Bo‘limlar:", {
     if (data.startsWith('delete_section_')) {
         const sectionName = data.replace('delete_section_', '');
     
-        // Bo‘limga tegishli fayllarni tekshiramiz
-        const fileCount = await File.countDocuments({ section: new RegExp(`^${sectionName}\\|`) });
-        if (fileCount > 0) {
-          return bot.sendMessage(chatId, `❌ Bu bo‘limda fayllar bor. Avval fayllarni o‘chiring.`);
-        }
+        // Fayllarni o‘chiramiz
+        await File.deleteMany({ section: new RegExp(`^${sectionName}\\|`) });
     
-        // Subbo‘limlar o‘chiriladi
+        // Subbo‘limlarni o‘chiramiz
         await SubSection.deleteMany({ parentSection: sectionName });
     
-        // Bo‘lim o‘chiriladi
+        // Bo‘limni o‘chiramiz
         await Section.deleteOne({ name: sectionName });
     
-        return bot.sendMessage(chatId, `✅ Bo‘lim va unga tegishli subbo‘limlar o‘chirildi: ${sectionName}`);
+        return bot.sendMessage(chatId, `✅ Bo‘lim "${sectionName}" va ichidagi barcha subbo‘limlar va fayllar o‘chirildi.`);
+      }
+      if (data.startsWith('delete_sub_')) {
+        const [sectionName, subName] = data.replace('delete_sub_', '').split('|');
+    
+        // Fayllarni o‘chiramiz
+        await File.deleteMany({ section: `${sectionName}|${subName}` });
+    
+        // Subbo‘limni o‘chiramiz
+        await SubSection.deleteOne({ name: subName, parentSection: sectionName });
+    
+        return bot.sendMessage(chatId, `✅ Subbo‘lim "${subName}" (bo‘lim: ${sectionName}) va barcha fayllari o‘chirildi.`);
       }
   
     await bot.answerCallbackQuery(query.id);
