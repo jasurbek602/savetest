@@ -335,7 +335,7 @@ const keyboard = sections.map(s => [
   { text: `Fileni ko'rish${s.name}`, callback_data: `view_section_${s.name}` }
 ]);
 
-if (data.startsWith('delete_section') && ADMINS.includes(userId)) {
+if (data.startsWith('delete_section_') && ADMINS.includes(userId)) {
     bot.sendMessage(chatId, "Bo‘limlar:", {
       reply_markup: { inline_keyboard: keyboard }
     });
