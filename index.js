@@ -332,11 +332,14 @@ bot.on('callback_query', async (query) => {
       const sections = await Section.find();
 const keyboard = sections.map(s => [
   { text: `❌ ${s.name}`, callback_data: `delete_section_${s.name}` },
-  { text: `📂 ${s.name}`, callback_data: `view_section_${s.name}` }
+  { text: `Fileni ko'rish${s.name}`, callback_data: `view_section_${s.name}` }
 ]);
-bot.sendMessage(chatId, "Bo‘limlar:", {
-  reply_markup: { inline_keyboard: keyboard }
-});
+
+if (ADMINS.includes(userId)) {
+    bot.sendMessage(chatId, "Bo‘limlar:", {
+      reply_markup: { inline_keyboard: keyboard }
+    });
+}
     // === Admin panel tugmalari ===
     if (data === 'admin_panel' && ADMINS.includes(userId)) {
       return bot.sendMessage(chatId, 'Admin paneli:', {
