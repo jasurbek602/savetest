@@ -38,28 +38,29 @@ const SubSection = mongoose.model('SubSection', subSectionSchema);
 const bot = new TelegramBot(BOT_TOKEN, { polling: true });
 const userStates = {};
 
-bot.onText(/\/addfile/, async (msg) => {
-  const chatId = msg.chat.id;
-  const userId = msg.from.id;
+// bot.onText(/\/addfile/, async (msg) => {
+//   const chatId = msg.chat.id;
+//   const userId = msg.from.id;
 
-  if (!ADMINS.includes(userId)) return;
+//   if (!ADMINS.includes(userId)) return;
 
-  const sections = await Section.find();
-  if (!sections.length) return bot.sendMessage(chatId, "Hech qanday bo‘lim yo‘q. Avval bo‘lim qo‘shing.");
+//   const sections = await Section.find();
+//   if (!sections.length) return bot.sendMessage(chatId, "Hech qanday bo‘lim yo‘q. Avval bo‘lim qo‘shing.");
 
-  const keyboard = sections.map(s => [{ text: s.name, callback_data: `addfile_section_${s.name}` }]);
-  adminSessions[userId] = { step: 'section' };
+//   const keyboard = sections.map(s => [{ text: s.name, callback_data: `addfile_section_${s.name}` }]);
+//   adminSessions[userId] = { step: 'section' };
 
-  bot.sendMessage(chatId, "Fayl qaysi bo‘limga qo‘shilsin?", {
-    reply_markup: { inline_keyboard: keyboard }
-  });
-});
+//   bot.sendMessage(chatId, "Fayl qaysi bo‘limga qo‘shilsin?", {
+//     reply_markup: { inline_keyboard: keyboard }
+//   });
+// });
 
 bot.on('callback_query', async (query) => {
   const data = query.data;
   const userId = query.from.id;
   const chatId = query.message.chat.id;
 
+    
   // Bo‘lim tanlandi
   if (data.startsWith('addfile_section_')) {
     const sectionName = data.replace('addfile_section_', '');
@@ -342,6 +343,7 @@ bot.sendMessage(chatId, "Bo‘limlar:", {
         reply_markup: {
           inline_keyboard: [
             [{ text: '📂 Bo‘limlarni boshqarish', callback_data: 'admin_manage_sections' }],
+            [{ text: '📂 File qo`shish', callback_data: 'add_file' }],
             [{ text: '➕ Bo‘lim qo‘shish', callback_data: 'admin_add_section' }],
             [{ text: '➕ Subbo‘lim qo‘shish', callback_data: 'admin_add_subsection' }],
             [{ text: '👤 Admin qo‘shish', callback_data: 'admin_add_admin' }],
@@ -355,6 +357,23 @@ bot.sendMessage(chatId, "Bo‘limlar:", {
       const sections = await Section.find();
       const keyboard = sections.map(s => [{ text: `🗑 ${s.name}`, callback_data: `del_section_${s.name}` }]);
       return bot.sendMessage(chatId, 'Bo‘limlardan birini o‘chiring:', { reply_markup: { inline_keyboard: keyboard } });
+    }
+
+    if (data === 'add_file') {
+        
+        
+      
+        if (!ADMINS.includes(userId)) return;
+      
+        const sections = await Section.find();
+        if (!sections.length) return bot.sendMessage(chatId, "Hech qanday bo‘lim yo‘q. Avval bo‘lim qo‘shing.");
+      
+        const keyboard = sections.map(s => [{ text: s.name, callback_data: `addfile_section_${s.name}` }]);
+        adminSessions[userId] = { step: 'section' };
+      
+        bot.sendMessage(chatId, "Fayl qaysi bo‘limga qo‘shilsin?", {
+          reply_markup: { inline_keyboard: keyboard }
+        });
     }
   
     if (data === 'admin_add_section') {
@@ -383,7 +402,7 @@ bot.sendMessage(chatId, "Bo‘limlar:", {
       userStates[chatId] = { action: 'change_channel' };
       return bot.sendMessage(chatId, `Yangi kanal usernamesini kiriting (@ bilan):`);
     }
-    if (data.startsWith('delete_section_')) {
+    if (data.startsWith('delete_section_') && ADMINS.includes(userId)) {
         const sectionName = data.replace('delete_section_', '');
     
         // Fayllarni o‘chiramiz
@@ -397,7 +416,7 @@ bot.sendMessage(chatId, "Bo‘limlar:", {
     
         return bot.sendMessage(chatId, `✅ Bo‘lim "${sectionName}" va ichidagi barcha subbo‘limlar va fayllar o‘chirildi.`);
       }
-      if (data.startsWith('delete_sub_')) {
+      if (data.startsWith('delete_sub_') && ADMINS.includes(userId)) {
         const [sectionName, subName] = data.replace('delete_sub_', '').split('|');
     
         // Fayllarni o‘chiramiz
