@@ -9,7 +9,6 @@ const BOT_TOKEN = '7558460976:AAHYVzgJjbdex9OLfmbNogIr420mwYNjbEQ';
 let CHANNEL_USERNAME = '@rapqonedu2024';
 const ADMINS = [2053660453]; // Admin user ID sini shu yerga yozing
 
-
 // === MongoDB ulanish ===
 mongoose.connect('mongodb+srv://pg99lvl:Jasurbek%232008@cluster0.86xrt46.mongodb.net/?retryWrites=true&w=majority')
   .then(() => console.log("✅ MongoDB ulanish muvaffaqiyatli"))
@@ -329,6 +328,14 @@ bot.on('callback_query', async (query) => {
         }
       }
   
+      const sections = await Section.find();
+const keyboard = sections.map(s => [
+  { text: `❌ ${s.name}`, callback_data: `delete_section_${s.name}` },
+  { text: `📂 ${s.name}`, callback_data: `view_section_${s.name}` }
+]);
+bot.sendMessage(chatId, "Bo‘limlar:", {
+  reply_markup: { inline_keyboard: keyboard }
+});
     // === Admin panel tugmalari ===
     if (data === 'admin_panel' && ADMINS.includes(userId)) {
       return bot.sendMessage(chatId, 'Admin paneli:', {
@@ -376,6 +383,23 @@ bot.on('callback_query', async (query) => {
       userStates[chatId] = { action: 'change_channel' };
       return bot.sendMessage(chatId, `Yangi kanal usernamesini kiriting (@ bilan):`);
     }
+    if (data.startsWith('delete_section_')) {
+        const sectionName = data.replace('delete_section_', '');
+    
+        // Bo‘limga tegishli fayllarni tekshiramiz
+        const fileCount = await File.countDocuments({ section: new RegExp(`^${sectionName}\\|`) });
+        if (fileCount > 0) {
+          return bot.sendMessage(chatId, `❌ Bu bo‘limda fayllar bor. Avval fayllarni o‘chiring.`);
+        }
+    
+        // Subbo‘limlar o‘chiriladi
+        await SubSection.deleteMany({ parentSection: sectionName });
+    
+        // Bo‘lim o‘chiriladi
+        await Section.deleteOne({ name: sectionName });
+    
+        return bot.sendMessage(chatId, `✅ Bo‘lim va unga tegishli subbo‘limlar o‘chirildi: ${sectionName}`);
+      }
   
     await bot.answerCallbackQuery(query.id);
   });
