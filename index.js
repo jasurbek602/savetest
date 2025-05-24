@@ -338,7 +338,7 @@ const keyboard = sections.map(s => [
   { text: `Sub bo'limni o'chirish`, callback_data: `delete_sub_${s.name}` }
 ]);
 
-if (data.startsWith('del_section_')) {
+if (data == 'admin_manage_del_sub') {
     const sectionName = data.replace('del_section_', '');
     const subs = await SubSection.find({ parentSection: sectionName });
   
@@ -363,6 +363,7 @@ if (data.startsWith('del_section_') && ADMINS.includes(userId)) {
         reply_markup: {
           inline_keyboard: [
             [{ text: '📂 Bo‘limlarni boshqarish', callback_data: 'admin_manage_sections' }],
+            [{ text: '❌ Sub bo`lim o`chirish', callback_data: 'admin_manage_del_sub' }],
             [{ text: '📂 File qo`shish', callback_data: 'add_file' }],
             [{ text: '➕ Bo‘lim qo‘shish', callback_data: 'admin_add_section' }],
             [{ text: '➕ Subbo‘lim qo‘shish', callback_data: 'admin_add_subsection' }],
