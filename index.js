@@ -335,7 +335,7 @@ bot.on('callback_query', async (query) => {
 const keyboard = sections.map(s => [
   { text: `❌ ${s.name}`, callback_data: `delete_section_${s.name}` },
   { text: `Fileni ko'rish`, callback_data: `view_section_${s.name}` },
-  { text: `Sub bo'limni o'chirish`, callback_data: `delete_sub_${s.name}` }
+  { text: `Sub bo'limni o'chirish`, callback_data: `delet_sub_${s.name}` }
 ]);
 if (data.startsWith('del_section_') && ADMINS.includes(userId)) {
     bot.sendMessage(chatId, "Bo‘limlar:", {
@@ -343,8 +343,8 @@ if (data.startsWith('del_section_') && ADMINS.includes(userId)) {
     });
 }
 
-if (data.startsWith('delete_sub_')) {
-    const sectionName = data.replace('delete_sub_', '');
+if (data.startsWith('delet_sub_')) {
+    const sectionName = data.replace('delet_sub_', '');
     const subs = await SubSection.find({ parentSection: sectionName });
   
     const keyboard = subs.map(s => [
