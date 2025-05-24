@@ -4,7 +4,7 @@ const axios = require('axios');
 const mongoose = require('mongoose');
 
 // === Sozlamalar ===
-const BOT_TOKEN = '7558460976:AAHYVzgJjbdex9OLfmbNogIr420mwYNjbEQ';
+const BOT_TOKEN = '7665871214:AAGi2SV_KaOMqr_LXKoGRsJF_XVRz2sSykE';
 
 let CHANNEL_USERNAME = '@rapqonedu2024';
 const ADMINS = [2053660453]; // Admin user ID sini shu yerga yozing
@@ -334,7 +334,6 @@ bot.on('callback_query', async (query) => {
       const sections = await Section.find();
 const keyboard = sections.map(s => [
   { text: `❌ ${s.name}`, callback_data: `delete_section_${s.name}` },
-  { text: `Fileni ko'rish`, callback_data: `view_section_${s.name}` },
   { text: `Sub bo'limni o'chirish`, callback_data: `delet_sub_${s.name}` }
 ]);
 if (data.startsWith('del_section_') && ADMINS.includes(userId)) {
@@ -363,7 +362,6 @@ if (data.startsWith('delet_sub_')) {
         reply_markup: {
           inline_keyboard: [
             [{ text: '📂 Bo‘limlarni boshqarish', callback_data: 'admin_manage_sections' }],
-            [{ text: '❌ Sub bo`lim o`chirish', callback_data: 'admin_manage_del_sub' }],
             [{ text: '📂 File qo`shish', callback_data: 'add_file' }],
             [{ text: '➕ Bo‘lim qo‘shish', callback_data: 'admin_add_section' }],
             [{ text: '➕ Subbo‘lim qo‘shish', callback_data: 'admin_add_subsection' }],
