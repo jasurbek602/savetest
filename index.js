@@ -439,7 +439,7 @@ if (data.startsWith('delete_sub_')) {
     await bot.answerCallbackQuery(query.id);
   });
   if (data.startsWith('delete_sub_') && ADMINS.includes(userId)) {
-    const [sectionName, subName] = data.replace('delete_sub_', '').split('|').map(t => t.trim());
+    const [sectionName, subName] = data.replace('delete_sub_', '').split('|');
 
     console.log(subName);
     
