@@ -435,22 +435,23 @@ if (data.startsWith('delet_sub_')) {
     
         return bot.sendMessage(chatId, `✅ Bo‘lim "${sectionName}" va ichidagi barcha subbo‘limlar va fayllar o‘chirildi.`);
       }
+      if (data.startsWith('delete_sub_') && ADMINS.includes(userId)) {
+        const [sectionName, subName] = data.replace('delete_sub_', '').split('|').map(t => t.trim());
+    
+        console.log(subName);
+        
+        // Fayllarni o‘chiramiz
+        await File.deleteMany({ section: `${sectionName}|${subName}` });
+    
+        // Subbo‘limni o‘chiramiz
+        await SubSection.deleteOne({ name: subName, parentSection: sectionName });
+    
+        return bot.sendMessage(chatId, `✅ Subbo‘lim "${subName}" (bo‘lim: ${sectionName}) va barcha fayllari o‘chirildi.`);
+      }
   
     await bot.answerCallbackQuery(query.id);
   });
-  if (data.startsWith('delete_sub_') && ADMINS.includes(userId)) {
-    const [sectionName, subName] = data.replace('delete_sub_', '').split('|');
-
-    console.log(subName);
-    
-    // Fayllarni o‘chiramiz
-    await File.deleteMany({ section: `${sectionName}|${subName}` });
-
-    // Subbo‘limni o‘chiramiz
-    await SubSection.deleteOne({ name: subName, parentSection: sectionName });
-
-    return bot.sendMessage(chatId, `✅ Subbo‘lim "${subName}" (bo‘lim: ${sectionName}) va barcha fayllari o‘chirildi.`);
-  }
+  
   
 
 // === /admin komandasi ===
