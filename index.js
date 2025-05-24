@@ -338,7 +338,7 @@ const keyboard = sections.map(s => [
   { text: `Sub bo'limni o'chirish`, callback_data: `delete_sub_${s.name}` }
 ]);
 
-if (data == 'admin_manage_del_sub') {
+if (data.startsWith('del_section_')) {
     const sectionName = data.replace('del_section_', '');
     const subs = await SubSection.find({ parentSection: sectionName });
   
