@@ -336,6 +336,20 @@ const keyboard = sections.map(s => [
   { text: `Sub bo'limni o'chirish`, callback_data: `delete_sub_${s.name}` }
 ]);
 
+if (data.startsWith('section_')) {
+    const sectionName = data.replace('section_', '');
+    const subs = await SubSection.find({ parentSection: sectionName });
+  
+    const keyboard = subs.map(s => [
+      { text: `📁 ${s.name}`, callback_data: `sub_${sectionName}|${s.name}` },
+      { text: `❌ O‘chirish`, callback_data: `delete_sub_${sectionName}|${s.name}` }
+    ]);
+  
+    return bot.sendMessage(chatId, "Subbo‘limni tanlang yoki o‘chiring:", {
+      reply_markup: { inline_keyboard: keyboard }
+    });
+  }
+
 if (data.startsWith('del_section_') && ADMINS.includes(userId)) {
     bot.sendMessage(chatId, "Bo‘limlar:", {
       reply_markup: { inline_keyboard: keyboard }
@@ -419,7 +433,7 @@ if (data.startsWith('del_section_') && ADMINS.includes(userId)) {
         return bot.sendMessage(chatId, `✅ Bo‘lim "${sectionName}" va ichidagi barcha subbo‘limlar va fayllar o‘chirildi.`);
       }
       if (data.startsWith('delete_sub_') && ADMINS.includes(userId)) {
-        const [sectionName, subName] = data.replace('delete_sub_', '').split('|');
+        const [sectionName, subName] = data.replace('delete_sub_', '').split('|').map(t => t.trim());
     
         console.log(subName);
         
