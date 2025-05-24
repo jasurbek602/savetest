@@ -335,7 +335,7 @@ const keyboard = sections.map(s => [
   { text: `Fileni ko'rish${s.name}`, callback_data: `view_section_${s.name}` }
 ]);
 
-if (data.startsWith('view_section_') && ADMINS.includes(userId)) {
+if (ADMINS.includes(userId)) {
     bot.sendMessage(chatId, "Bo‘limlar:", {
       reply_markup: { inline_keyboard: keyboard }
     });
