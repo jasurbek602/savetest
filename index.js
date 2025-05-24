@@ -332,7 +332,8 @@ bot.on('callback_query', async (query) => {
       const sections = await Section.find();
 const keyboard = sections.map(s => [
   { text: `❌ ${s.name}`, callback_data: `delete_section_${s.name}` },
-  { text: `Fileni ko'rish${s.name}`, callback_data: `view_section_${s.name}` }
+  { text: `Fileni ko'rish`, callback_data: `view_section_${s.name}` },
+  { text: `Fileni ko'rish`, callback_data: `delete_sub_${s.name}` }
 ]);
 
 if (data.startsWith('del_section_') && ADMINS.includes(userId)) {
@@ -402,6 +403,7 @@ if (data.startsWith('del_section_') && ADMINS.includes(userId)) {
       userStates[chatId] = { action: 'change_channel' };
       return bot.sendMessage(chatId, `Yangi kanal usernamesini kiriting (@ bilan):`);
     }
+
     if (data.startsWith('delete_section_') && ADMINS.includes(userId)) {
         const sectionName = data.replace('delete_section_', '');
     
